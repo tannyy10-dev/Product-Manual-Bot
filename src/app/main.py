@@ -7,36 +7,43 @@ from app.core.config import settings
 from app.core.events import lifespan
 from app.api.v1 import chat, ingestion
 
-# Create FastAPI app with lifespan events
-app = FastAPI(
-    title=settings.api_title,
-    version=settings.api_version,
-    lifespan=lifespan,
-)
+def create_app() -> FastAPI:
+    """
+    App Factory: Creates and configures the FastAPI application.
+    """
+    application = FastAPI(
+        title=settings.api_title,
+        version=settings.api_version,
+        lifespan=lifespan,
+    )
 
-# Configure CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+    # Configure CORS
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
-# Include routers
-app.include_router(chat.router, prefix=f"{settings.api_prefix}/chat", tags=["chat"])
-app.include_router(
-    ingestion.router,
-    prefix=f"{settings.api_prefix}/ingestion",
-    tags=["ingestion"],
-)
+    # Include routers
+    application.include_router(chat.router, prefix=f"{settings.api_prefix}/chat", tags=["chat"])
+    application.include_router(
+        ingestion.router,
+        prefix=f"{settings.api_prefix}/ingestion",
+        tags=["ingestion"],
+    )
 
+    # --- MOVED INSIDE THE FACTORY ---
+    @application.get("/health")
+    async def health_check():
+        """Health check endpoint."""
+        return {"status": "ok", "service": "product-manual-bot"}
+    
+    return application
 
-@app.get("/health")
-async def health_check():
-    """Health check endpoint."""
-    return {"status": "ok", "service": "product-manual-bot"}
-
+# Create the global app instance for production
+app = create_app()
 
 if __name__ == "__main__":
     import uvicorn

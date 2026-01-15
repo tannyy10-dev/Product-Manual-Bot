@@ -8,51 +8,58 @@ on:
 
 jobs:
   lint-and-test:
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      runs-on: ubuntu-latest
+      
+      steps:
+        - name: Checkout code
+          uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
+        - name: Set up Python
+          uses: actions/setup-python@v5
+          with:
+            python-version: '3.12'
 
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          version: latest
-          virtualenvs-create: true
-          virtualenvs-in-project: true
+        - name: Install Poetry
+          uses: snok/install-poetry@v1
+          with:
+            version: latest
+            virtualenvs-create: true
+            virtualenvs-in-project: true
 
-      - name: Load cached venv
-        id: cached-poetry-dependencies
-        uses: actions/cache@v3
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+        - name: Load cached venv
+          id: cached-poetry-dependencies
+          uses: actions/cache@v3
+          with:
+            path: .venv
+            key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
 
-      - name: Install dependencies
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --no-root
+        - name: Install dependencies
+          if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+          run: poetry install --no-interaction --no-root
 
-      - name: Install project
-        run: poetry install --no-interaction
+        - name: Install project
+          run: poetry install --no-interaction
 
-      - name: Run Ruff linter
-        run: poetry run ruff check src/ tests/
+        - name: Run Ruff linter
+          run: poetry run ruff check src/ tests/
 
-      - name: Run Ruff formatter check
-        run: poetry run ruff format --check src/ tests/
+        - name: Run Ruff formatter check
+          run: poetry run ruff format --check src/ tests/
 
-      - name: Run unit tests
-        run: poetry run pytest tests/unit/ -v
+        # --- CHANGED: Unified Test Command with HTML Report ---
+        - name: Run Tests with Coverage
+          # Runs both unit and integration tests, generates coverage, and fails on error
+          run: poetry run pytest --cov=src --cov-report=html tests/
 
-      - name: Run integration tests
-        run: poetry run pytest tests/integration/ -v
-        continue-on-error: true  # May fail without test DB setup
-
+        # --- NEW: Save Coverage Report as Artifact ---
+        - name: Upload Coverage Report
+          uses: actions/upload-artifact@v4
+          if: always()  # Uploads report even if tests fail
+          with:
+            name: coverage-report
+            path: htmlcov/
+            retention-days: 7
+            
   build:
     needs: lint-and-test
     runs-on: ubuntu-latest
