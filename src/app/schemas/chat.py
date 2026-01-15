@@ -16,9 +16,9 @@ class ChatRequest(BaseModel):
     """Request schema for chat endpoint."""
 
     messages: list[ChatMessage] = Field(
-        ...,
+        default=[],  # <--- Allow empty list by default
         description="Chat history as list of messages",
-        min_length=1,
+        # min_length=1,  <--- DELETE THIS LINE
     )
     query: str = Field(
         ...,
